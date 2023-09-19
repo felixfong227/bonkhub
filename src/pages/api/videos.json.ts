@@ -20,7 +20,7 @@ const continuationSchema = z.array(
             limit: z.null().optional(),
             safeSearch: z.boolean(),
             pages: z.number(),
-            requestOptions: z.object({ method: z.string() }),
+            requestOptions: z.object({}).optional(),
             query: z.object({
                 gl: z.string(),
                 hl: z.string(),
@@ -29,7 +29,7 @@ const continuationSchema = z.array(
             search: z.string()
         })
     ])
-)
+);
 
 function isValidBase64(str: string) {
     try {
@@ -60,12 +60,13 @@ function parseStrToObject(str: string) {
     return JSON.parse(str);
 }
 
-function continuationValidation(val: object, ctx: z.RefinementCtx) {
+function continuationValidationAndTransform(val: object, ctx: z.RefinementCtx) {
     const result = continuationSchema.safeParse(val);
     if (!result.success) {
         result.error.issues.forEach(issue => ctx.addIssue(issue));
+        return false;
     }
-    return true;
+    return result.data;
 }
 
 const querySchema = z.object({
@@ -74,11 +75,8 @@ const querySchema = z.object({
         .superRefine(isBase64JSONLike)
         .transform(atob)
         .transform(parseStrToObject)
-        .superRefine(continuationValidation)
-        // // .refine(val => continuationSchema.safeParse(val).success, 'The continuation schema is not valid, whyyyyyyyyyyy?????????????????? *BONK*')
-        // .refine(continuationValidation)
-        // .transform(val => continuationSchema.safeParse(val))
-        // .optional()
+        .transform(continuationValidationAndTransform)
+        .optional()
 });
 
 export const GET: APIRoute = async ({ request }) => {
@@ -105,16 +103,22 @@ export const GET: APIRoute = async ({ request }) => {
 
     try {
 
-        const searchResults = await ytsr('BONK meme', {
+        const searchResults = () => ytsr('BONK meme', {
             limit: 10,
             pages: 1,
         });
+        
+        const continuationResult = () => queryParams.data.continuation ? ytsr.continueReq(queryParams.data.continuation) : null;
+        
+        let result = queryParams.data.continuation ? (await continuationResult()) : (await searchResults());
 
         return new Response(
             JSON.stringify({
-                data: searchResults.items,
+                data: result?.items,
                 metadata: {
-                    continuation: searchResults.continuation !== null ? btoa(JSON.stringify(searchResults.continuation)) : null,
+                    continuation: result ? (
+                        result.continuation !== null ? btoa(JSON.stringify(result.continuation)) : null
+                     ) : null,
                 }
             }),
             {

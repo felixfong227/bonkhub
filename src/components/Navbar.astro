@@ -1,0 +1,31 @@
+---
+import { Image } from 'astro:assets';
+import BonkPNG from '../assets/images/bonk.png';
+---
+
+<div class="navbar bg-base-100">
+  <div class="navbar-start">
+    <a class="btn btn-ghost normal-case text-xl">BonkHub</a>
+  </div>
+
+  <div class="navbar-center lg:flex w-1/2 justify-center">
+    <input type="text" placeholder="Search" class="input input-bordered w-full max-w-lg rounded-full" />
+  </div>
+
+  <div class="navbar-end">
+    <div class="avatar">
+      <button class="btn btn-circle">
+        <div class="w-24 rounded-full overflow-hidden">
+          <Image
+            src={BonkPNG}
+            alt="user pic"
+            decoding={'async'}
+            loading={'lazy'}
+            width={32}
+            height={32}
+          />
+        </div>
+      </button>
+    </div>
+  </div>
+</div>

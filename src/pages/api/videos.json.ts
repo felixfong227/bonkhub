@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'astro/zod';
 import ytsr from 'ytsr';
 
-const continuationSchema = z.array(
+export const continuationSchema = z.array(
     z.union([
         z.string(),
         z.object({
@@ -79,6 +79,13 @@ const querySchema = z.object({
         .optional()
 });
 
+export type ResponseType = {
+    data: ytsr.Item[] | [],
+    metadata: {
+       continuation: string | null,
+    }
+}
+
 export const GET: APIRoute = async ({ request }) => {
 
     const url = new URL(request.url);
@@ -110,11 +117,11 @@ export const GET: APIRoute = async ({ request }) => {
         
         const continuationResult = () => queryParams.data.continuation ? ytsr.continueReq(queryParams.data.continuation) : null;
         
-        let result = queryParams.data.continuation ? (await continuationResult()) : (await searchResults());
+        const result: ytsr.ContinueResult | ytsr.Result | null = queryParams.data.continuation ? (await continuationResult()) : (await searchResults());
 
         return new Response(
             JSON.stringify({
-                data: result?.items,
+                data: result?.items ?? [],
                 metadata: {
                     continuation: result ? (
                         result.continuation !== null ? btoa(JSON.stringify(result.continuation)) : null
